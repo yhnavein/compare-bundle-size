@@ -1,0 +1,24 @@
+{
+  "name": "@yhnavein/compare-bundle-size",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.mjs",
+  "bin": {
+    "compare-bundle-size": "index.mjs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": {
+    "name": "Piotr Dabrowski",
+    "url": "https://github.com/yhnavein"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "node-fetch": "^3.3.2",
+    "octokit": "^3.1.0",
+    "pretty-bytes": "^6.1.1",
+    "size-plugin-core": "^0.0.9"
+  }
+}
