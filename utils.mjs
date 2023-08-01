@@ -9,7 +9,7 @@ export async function fileExists(filename) {
   try {
     await fs.promises.access(filename, fs.constants.F_OK);
     return true;
-  } catch (e) {}
+  } catch (e) { }
   return false;
 }
 
@@ -20,7 +20,6 @@ export async function fileExists(filename) {
  */
 export function stripHash(regex) {
   if (regex) {
-    console.log(`Stripping hash from build chunks using '${regex}' pattern.`);
     return function (fileName) {
       return fileName.replace(new RegExp(regex), (str, ...hashes) => {
         hashes = hashes.slice(0, -2).filter((c) => c != null);
@@ -194,20 +193,24 @@ export function toBool(v) {
   return /^(1|true|yes)$/.test(v);
 }
 
-export function updateGistContents(fileContents, fileName) {
+export async function updateGistContents(fileContents, fileName) {
   const gistId = process.env.GIST_ID;
   const ghToken = process.env.GITHUB_TOKEN;
 
-  fetch('https://api.github.com/gists/' + gistId, {
-    body: JSON.stringify({
-      files: { [fileName]: { content: JSON.stringify(fileContents) } },
-    }),
-    method: 'PATCH',
-    headers: {
-      Authorization: 'Bearer ' + ghToken,
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-  }).then();
+  try {
+    await fetch('https://api.github.com/gists/' + gistId, {
+      body: JSON.stringify({
+        files: { [fileName]: { content: JSON.stringify(fileContents, null, 2) } },
+      }),
+      method: 'PATCH',
+      headers: {
+        Authorization: 'Bearer ' + ghToken,
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+  } catch (error) {
+    console.error('updateGistContents error', error);
+  }
 }
 
 export async function getGistContents(fileName) {

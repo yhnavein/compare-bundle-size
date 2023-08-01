@@ -17,8 +17,8 @@
   "dependencies": {
     "dotenv": "^16.3.1",
     "node-fetch": "^3.3.2",
-    "octokit": "^3.1.0",
     "pretty-bytes": "^6.1.1",
-    "size-plugin-core": "^0.0.9"
+    "size-plugin-core": "^0.0.9",
+    "yargs": "^17.7.2"
   }
 }
