@@ -54,8 +54,8 @@ export function devStatsDiff(curr, prev) {
   const fileCountDiff = curr.count - prev?.count || 0;
   const fileSizeDiff = curr.size - prev?.size || 0;
 
-  const countDiff = prev && fileCountDiff !== 0 && `(**${fileCountDiff > 0 ? '+' : '-'}${fileCountDiff}** change) ${iconForDifference(fileCountDiff, prev.count)}`;
-  const sizeDiff = prev && fileSizeDiff !== 0 && `(**${fileSizeDiff > 0 ? '+' : '-'}${prettyBytes(fileSizeDiff)}** change) ${iconForDifference(fileSizeDiff, prev.size)}`;
+  const countDiff = prev && fileCountDiff !== 0 && `(**${fileCountDiff > 0 ? '+' : ''}${fileCountDiff}** change) ${iconForDifference(fileCountDiff, prev.count)}`;
+  const sizeDiff = prev && fileSizeDiff !== 0 && `(**${fileSizeDiff > 0 ? '+' : ''}${prettyBytes(fileSizeDiff)}** change) ${iconForDifference(fileSizeDiff, prev.size)}`;
 
 
   return `
