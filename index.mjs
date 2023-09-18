@@ -4,11 +4,10 @@ import 'dotenv/config';
 import SizePlugin from 'size-plugin-core';
 import yargs from 'yargs';
 
-import { stripHash, getGistContents, diffTable, updateGistContents } from './utils.mjs';
+import { stripHash, getGistContents, diffTable, updateGistContents, getDevStats, devStatsDiff } from './utils.mjs';
 
 const excludePattern = /\/precache-manifest\./;
 const trimPathPattern = '/build/output';
-const gistFileName = process.env.GIST_FILE;
 
 const plugin = new SizePlugin({
   compression: 'gzip', // gzip/brotli/none
@@ -21,36 +20,69 @@ const args = yargs(process.argv.slice(2))
   .scriptName('compare-bundle-size')
   .usage('$0 <cmd> [args]')
   .command('update', 'Update stored summary of the bundle (master)', {}, (argv) => {
-    update();
+    update(argv);
   })
   .command('compare', 'Compare your bundle against the stored summary', {}, (argv) => {
-    compare();
+    compare(argv);
+  })
+  .option('devStats', {
+    alias: 'd',
+    default: false,
+    type: 'boolean',
+    description: 'Collects stats about the node_modules folder'
+  })
+  .option('threshold', {
+    alias: 't',
+    default: 10,
+    type: 'number',
+    description: 'Minimum size difference (in bytes) to be visible'
   })
   .help()
   .argv;
 
-async function compare() {
+/**
+ * This function loads the current bundle size and compares it to the previous
+ * bundle size stored in the Gist. It then prints a markdown table with the differences
+ * that can be used in the PR comment.
+ */
+async function compare({ devStats, threshold }) {
   const origSizes = await plugin.readFromDisk('./');
   const sizes = cleanSizes(origSizes);
 
-  const oldSizes = await getGistContents(process.env.GIST_FILE);
-  const diff = await plugin.getDiff(oldSizes, sizes);
+  const prev = await getGistContents();
+  const diff = await plugin.getDiff(prev.bundle ?? {}, sizes);
 
   const markdownDiff = diffTable(diff, {
     collapseUnchanged: true, // toBool(getInput('collapse-unchanged')),
     omitUnchanged: false, // toBool(getInput('omit-unchanged')),
     showTotal: true, // toBool(getInput('show-total')),
-    minimumChangeThreshold: 10 //parseInt(getInput('minimum-change-threshold'), 10)
+    minimumChangeThreshold: threshold
   });
 
   console.log(markdownDiff);
+
+  if (devStats) {
+    const curStats = await getDevStats();
+    const statsDiff = devStatsDiff(curStats, prev.devStats);
+    console.log(statsDiff);
+  }
 }
 
-async function update() {
+/**
+ * This function loads the current bundle size and then stores it in the Gist
+ */
+async function update({ devStats }) {
   const origSizes = await plugin.readFromDisk('./');
   const sizes = cleanSizes(origSizes);
+  const gistFile = {
+    bundle: sizes,
+  };
 
-  await updateGistContents(sizes, gistFileName);
+  if (devStats) {
+    gistFile.devStats = await getDevStats();
+  }
+
+  await updateGistContents(gistFile);
 }
 
 function cleanSizes(sizes) {

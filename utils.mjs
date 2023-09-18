@@ -1,18 +1,9 @@
-import fs from 'fs';
 import fetch from 'node-fetch';
 import prettyBytes from 'pretty-bytes';
+import { readdir } from 'fs/promises';
+import getFolderSize from 'get-folder-size';
 
-/**
- * Check if a given file exists and can be accessed.
- * @param {string} filename
- */
-export async function fileExists(filename) {
-  try {
-    await fs.promises.access(filename, fs.constants.F_OK);
-    return true;
-  } catch (e) { }
-  return false;
-}
+const GIST_FILE_NAME = 'bundle-stats.json';
 
 /**
  * Remove any matched hash patterns from a filename string.
@@ -37,6 +28,43 @@ export function stripHash(regex) {
   }
 
   return undefined;
+}
+
+/**
+ * Returns some dev stats about the node_modules folder.
+ * @returns size in bytes and count (file/dir count in node_modules)
+ * */
+export async function getDevStats() {
+  const DIRECTORY = './node_modules';
+  const size = await getFolderSize.loose(DIRECTORY);
+  const files = await readdir(DIRECTORY);
+
+  return {
+    size,
+    count: files.length
+  }
+}
+
+/**
+ * Returns some dev stats about the node_modules folder.
+ * @returns size in bytes and count (file/dir count in node_modules)
+ * */
+export function devStatsDiff(curr, prev) {
+  const currSize = prettyBytes(curr.size);
+  const fileCountDiff = curr.count - prev?.count || 0;
+  const fileSizeDiff = curr.size - prev?.size || 0;
+
+  const countDiff = prev && fileCountDiff !== 0 && `(**${fileCountDiff > 0 ? '+' : '-'}${fileCountDiff}** change) ${iconForDifference(fileCountDiff, prev.count)}`;
+  const sizeDiff = prev && fileSizeDiff !== 0 && `(**${fileSizeDiff > 0 ? '+' : '-'}${prettyBytes(fileSizeDiff)}** change) ${iconForDifference(fileSizeDiff, prev.size)}`;
+
+
+  return `
+## node_modules stats
+
+**Module count:** ${curr.count} ${countDiff || ''}
+
+**Total Size:** ${currSize} ${sizeDiff || ''}
+  `;
 }
 
 /**
@@ -121,13 +149,6 @@ function markdownTable(rows) {
 }
 
 /**
- * @typedef {Object} Diff
- * @property {string} filename
- * @property {number} size
- * @property {number} delta
- */
-
-/**
  * Create a Markdown table showing diff data
  * @param {Diff[]} files
  * @param {object} options
@@ -186,22 +207,14 @@ export function diffTable(
   return out;
 }
 
-/**
- * Convert a string "true"/"yes"/"1" argument value to a boolean
- * @param {string} v
- */
-export function toBool(v) {
-  return /^(1|true|yes)$/.test(v);
-}
-
-export async function updateGistContents(fileContents, fileName) {
+export async function updateGistContents(fileContents) {
   const gistId = process.env.GIST_ID;
   const ghToken = process.env.GITHUB_TOKEN;
 
   try {
     await fetch('https://api.github.com/gists/' + gistId, {
       body: JSON.stringify({
-        files: { [fileName]: { content: JSON.stringify(fileContents, null, 2) } },
+        files: { [GIST_FILE_NAME]: { content: JSON.stringify(fileContents, null, 2) } },
       }),
       method: 'PATCH',
       headers: {
@@ -214,7 +227,7 @@ export async function updateGistContents(fileContents, fileName) {
   }
 }
 
-export async function getGistContents(fileName) {
+export async function getGistContents() {
   const gistId = process.env.GIST_ID;
   const ghToken = process.env.GITHUB_TOKEN;
 
@@ -231,7 +244,18 @@ export async function getGistContents(fileName) {
     }
 
     const gistData = await response.json();
-    return JSON.parse(gistData.files[fileName].content);
+    const gistFile = gistData.files[GIST_FILE_NAME];
+    const jsonFile = gistFile ? JSON.parse(gistFile.content) : {};
+
+    // There is a change in how the stored file is structured
+    // So here we will normalize the file to make it backward compatible
+    if (jsonFile.bundle) {
+      return jsonFile;
+    }
+
+    return {
+      bundle: jsonFile,
+    }
   } catch (error) {
     console.error('getGistContents error', error);
   }
