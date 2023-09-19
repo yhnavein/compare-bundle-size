@@ -50,12 +50,13 @@ export async function getDevStats() {
  * @returns size in bytes and count (file/dir count in node_modules)
  * */
 export function devStatsDiff(curr, prev) {
+  const SIZE_DIFF_THRESHOLD = 100000; // 100kB
   const currSize = prettyBytes(curr.size);
   const fileCountDiff = curr.count - prev?.count || 0;
   const fileSizeDiff = curr.size - prev?.size || 0;
 
   const countDiff = prev && fileCountDiff !== 0 && `(**${fileCountDiff > 0 ? '+' : ''}${fileCountDiff}** change) ${iconForDifference(fileCountDiff, prev.count)}`;
-  const sizeDiff = prev && fileSizeDiff !== 0 && `(**${fileSizeDiff > 0 ? '+' : ''}${prettyBytes(fileSizeDiff)}** change) ${iconForDifference(fileSizeDiff, prev.size)}`;
+  const sizeDiff = prev && Math.abs(fileSizeDiff) > SIZE_DIFF_THRESHOLD && `(**${fileSizeDiff > 0 ? '+' : ''}${prettyBytes(fileSizeDiff)}** change) ${iconForDifference(fileSizeDiff, prev.size)}`;
 
 
   return `
