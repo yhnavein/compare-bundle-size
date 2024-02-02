@@ -13,7 +13,7 @@ const plugin = new SizePlugin({
   compression: 'gzip', // gzip/brotli/none
   pattern: './build/**/*.{js,css,html}',
   exclude: '{**/*.map,**/node_modules/**}',
-  stripHash: stripHash('\\.(\\w{8})\\.js$'),
+  stripHash: stripHash('[\\.-](\\w{8})\\.js$'),
 });
 
 const args = yargs(process.argv.slice(2))
